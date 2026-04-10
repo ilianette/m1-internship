@@ -20,9 +20,10 @@ Class BM : Type :=
   cov : worlds -> (worlds -> Prop) -> Prop;
   cov_future : forall C w w', cov w C -> C w' -> acc w w';
   cov_sing : forall w, cov w (eq w);
+  (* covers are set*)
   cov_ext : forall C C', (forall w, C w <-> C' w) -> forall w, cov w C -> cov w C';
 
-  res : worlds -> (worlds -> Prop) -> worlds -> Prop;
+  res : worlds -> (worlds -> Prop) -> (worlds -> Prop);
   res_mono : forall C w0 w1, cov w0 C -> acc w0 w1 -> cov w1 (res w1 C);
   res_ext : forall C w1 w2, res w1 C w2 -> exists w3, C w3 /\ acc w3 w2;
 
@@ -48,8 +49,8 @@ Lemma mono {M : BM} w w' phi :
 Proof.
   induction phi in w, w' |-*; cbn.
    - apply val_mono.
-    - intros H1 H2. eapply cov_ext; try eapply res_mono; eauto.
-    intuition. apply res_ext in H. firstorder.
+    - intros H1 H2.  eapply cov_ext; try eapply res_mono; eauto.
+      intuition. apply res_ext in H. firstorder.
   - intuition eauto.
   - intros H (C & H1 & H2). exists (res w' C). split.
     + eapply res_mono; eauto.
@@ -64,17 +65,25 @@ Lemma paste {M : BM} w phi C :
 Proof.
   induction phi in w, C |-*; cbn.
   - apply cov_paste.
-  - intros H H'. apply H'. admit.
+  - intros H H'.
+    eapply cov_union in H'.
+    eapply (cov_ext (fun _ => exists wi : worlds, C wi /\ False)); intuition; firstorder; eassumption.
   - intros H1 H2. split.
     + eapply IHphi1; firstorder eauto.
     + eapply IHphi2; firstorder eauto.
-  - intros H1 H2. admit.
-  - intros. eapply IHphi2; eauto.
-    + eapply res_mono; eauto.
-    + intros. apply res_ext in H3 as (w1 & H4 & H5).
-      eapply H0; eauto. eapply IHphi1; eauto. admit.
-      admit.
+  - intros H1 H2.
+    (* I am not sure if it is actually possible with our cov_union without choice. *)
+    admit.
+  - intros. eapply IHphi2.  apply res_mono with (w0 := w). apply H. apply H1.
+    intros v' Hv'.
+    pose proof Hv' as Hv'2.
+    apply res_ext in Hv' as (v & Hv &  Hvv').
+    eapply H0; eauto.
+    apply mono with (w:=w').
+      + eapply cov_future; try eapply res_mono; eauto.
+      + assumption.
 Admitted.
+
 
 (* Lemma excl_check1 {M : BM} w A B :
   bsat w (impl A (disj B (excl A B))).
