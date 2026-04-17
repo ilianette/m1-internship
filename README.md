@@ -1,1 +1,0 @@
-In this branch I put everything that is annoying me in Type, so I can still go forward. It does not mean that everything that lives in Type *needs to* but that I couldn’t immedietaly see how to keep it in Prop.
