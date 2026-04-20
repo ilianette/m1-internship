@@ -27,12 +27,21 @@ Class BM : Type :=
   res_mono : forall C w0 w1, cov w0 C -> acc w0 w1 -> cov w1 (res w1 C);
   res_ext : forall C w1 w2, res w1 C w2 -> exists w3, C w3 /\ acc w3 w2;
 
-  cov_union : forall C w, forall D : worlds -> worlds -> Prop,
-    (forall wi, C wi -> cov wi (D wi))
-    -> cov w (fun w' => exists wi, C wi /\ D wi w');
+  (* cov_union : forall C w, forall D : worlds -> worlds -> Prop, *)
 
+  (*   cov w C -> *)
+  (*   (forall wi, C wi -> cov wi (D wi)) *)
+  (*   -> cov w (fun w' => exists wi, C wi /\ D wi w'); *)
+
+  (* if C |> w and for every w' in C has a cover verifying property P, then the union-cover of w verifies P *)
+  cov_union : forall w (P : worlds -> Prop) C,
+    cov w C ->
+    (forall w' : worlds, C w' -> exists Dw', cov w' Dw' /\ forall wi, Dw' wi -> P wi) ->
+    exists U, cov w U /\ (forall w', U w' -> P w');
   cov_paste : forall C w x, cov w C -> (forall w', C w' -> val x w') -> val x w;
 }.
+
+
 
 Fixpoint bsat {M : BM} (w : worlds) (phi : form) :=
   match phi with
@@ -66,14 +75,20 @@ Proof.
   induction phi in w, C |-*; cbn.
   - apply cov_paste.
   - intros H H'.
-    eapply cov_union in H'.
-    eapply (cov_ext (fun _ => exists wi : worlds, C wi /\ False)); intuition; firstorder; eassumption.
+    assert (exists U, cov w U /\ forall w', U w' -> False) as [U [HU1 HU2]].
+    { eapply cov_union.
+      + eassumption.
+      + intros. exists (fun _ => False). auto.
+    }
+    apply cov_ext with (C := U); intuition; firstorder.
   - intros H1 H2. split.
     + eapply IHphi1; firstorder eauto.
     + eapply IHphi2; firstorder eauto.
   - intros H1 H2.
-    (* I am not sure if it is actually possible with our cov_union without choice. *)
-    admit.
+    eapply cov_union. apply H1.
+    intros w' Cw'.
+    specialize (H2 w' Cw') as [Dw' [H3 H4]].
+    eauto.
   - intros. eapply IHphi2.  apply res_mono with (w0 := w). apply H. apply H1.
     intros v' Hv'.
     pose proof Hv' as Hv'2.
@@ -82,7 +97,7 @@ Proof.
     apply mono with (w:=w').
       + eapply cov_future; try eapply res_mono; eauto.
       + assumption.
-Admitted.
+Qed.
 
 
 (* Lemma excl_check1 {M : BM} w A B :
