@@ -1,5 +1,5 @@
-From Stdlib Require Import Lists.List.
-
+From Stdlib Require Import Lists.List Sorting.Permutation.
+Require Import Form.
 
 Inductive form : Type :=
 | var : nat -> form
@@ -7,6 +7,7 @@ Inductive form : Type :=
 | conj : form -> form -> form
 | disj : form -> form -> form
 | impl : form -> form -> form.
+
 
 Notation "⊥" := bot.
 Notation "¬ ϕ" := (impl ϕ ⊥) (at level 94, right associativity).
@@ -32,9 +33,10 @@ Inductive proves : list form -> form -> Prop :=
 | impE   : forall Γ ϕ ψ, Γ ⊢ ϕ ⊃ ψ -> Γ ⊢ ϕ -> Γ ⊢ ψ
 | disjI1 : forall Γ ϕ ψ, Γ ⊢ ϕ -> Γ ⊢ ϕ ∨ ψ
 | disjI2 : forall Γ ϕ ψ, Γ ⊢ ψ -> Γ ⊢ ϕ ∨ ψ
-(*| disjE*)
-
-
+| disjE  : forall Γ ϕ ψ γ, Γ ⊢ ϕ ∨ ψ -> Γ ⊢ ϕ ⊃ γ -> Γ ⊢ ψ ⊃ γ -> Γ ⊢ γ
+| conjI  : forall Γ ϕ ψ, Γ ⊢ ϕ -> Γ ⊢ ψ -> Γ ⊢ ϕ ∧ ψ
+| conjE1 : forall Γ ϕ ψ, Γ ⊢ ϕ ∧ ψ -> Γ ⊢ ϕ
+| conjE2 : forall Γ ϕ ψ, Γ ⊢ ϕ ∧ ψ -> Γ ⊢ ψ
 
 where "Γ ⊢ ϕ" := (proves Γ ϕ).
 
@@ -43,22 +45,49 @@ Definition list_theory (Γ : list form) : theory :=
 
 Coercion list_theory : list >-> theory.
 
+Definition mem T ϕ := T ϕ.
+Definition provesP T ϕ :=
+  exists (L : list form) , (forall ψ, mem L ψ -> T ψ) /\ proves L ϕ.
+
+
+Notation "Γ ⊢P ϕ" := (provesP Γ ϕ) (at level 98).
 Global Hint Constructors proves : core export.
+
+(* Lemma weakeningP ϕ Γ Δ : *)
+(*   Γ ⊢P ϕ -> Γ ⊆ Δ -> Δ ⊢P ϕ. *)
+(* Proof. *)
+(*   intros. *)
+(*   destruct H as [L [H1 H2]]. *)
+(*   exists L. *)
+(*   auto. *)
+(* Qed. *)
+
+
 
 (* should not prove this by hand *)
 Lemma weakening ϕ Γ Δ :
   Γ ⊢ ϕ -> Γ ⊆ Δ -> Δ ⊢ ϕ.
-  intro H. revert Δ.
-  induction H; intros Δ Hin; eauto.
-  - apply axiom.
-    specialize (Hin ϕ).
-    apply Hin, H.
+  intro H. revert Δ. induction H; intros Δ Hin; unfold list_theory in Hin; eauto.
   - apply impI.
     apply IHproves.
-    unfold list_theory.
-    intros τ H1. inversion H1.
-    + left. apply H0.
-    + right.
-      apply Hin.
-      apply H0.
+    intros τ H1. inversion H1; unfold list_theory; [left | right]; auto.
+Qed.
+
+Lemma reorder ϕ Γ Δ:
+  Γ ⊢ ϕ -> Permutation Γ Δ -> Δ ⊢ ϕ.
+Proof.
+  intro H. revert Δ. induction H; eauto 5.
+  - intros Δ Hperm.
+    apply axiom.
+    eapply Permutation_in. apply Hperm. apply H.
+Qed.
+
+Lemma weak ϕ Γ Δ :
+  Γ ⊢ ϕ -> (forall τ, In τ Γ -> In τ Δ) -> Δ ⊢ ϕ.
+Proof.
+  intro H. revert Δ. induction H; eauto.
+  - intros.
+    apply impI.
+    apply IHproves.
+    intros τ H1. inversion H1; [left | right]; auto.
 Qed.
