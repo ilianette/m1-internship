@@ -1,10 +1,5 @@
-Inductive form : Type :=
-| var : nat -> form
-| bot : form
-| conj : form -> form -> form
-| disj : form -> form -> form
-| impl : form -> form -> form.
-(* | excl : form -> form -> form. *)
+Require Import Form.
+Require Import Calculus.
 
 Class BM : Type :=
 {
@@ -53,6 +48,8 @@ Fixpoint bsat {M : BM} (w : worlds) (phi : form) :=
   (* | excl phi psi => exists C w', cov w' C /\ C w /\ acc w' w /\ bsat w' phi /\ ~ bsat w' psi *)
   end.
 
+Notation "w ⊩ ϕ" := (bsat w ϕ) (at level 98).
+
 Lemma mono {M : BM} w w' phi :
   acc w w' -> bsat w phi -> bsat w' phi.
 Proof.
@@ -99,6 +96,14 @@ Proof.
       + assumption.
 Qed.
 
+Definition tsat {M : BM} Γ w := forall ϕ, List.In ϕ Γ -> w ⊩ ϕ.
+
+
+Notation "w ⊩' Γ" := (tsat Γ w) (at level 98).
+Theorem soundess Γ ϕ :
+  Γ ⊢ ϕ -> forall (M : BM)  w, w ⊩' Γ -> w ⊩ ϕ.
+Proof.
+Admitted.
 
 (* Lemma excl_check1 {M : BM} w A B :
   bsat w (impl A (disj B (excl A B))).
