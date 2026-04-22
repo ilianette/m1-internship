@@ -98,12 +98,78 @@ Qed.
 
 Definition tsat {M : BM} Γ w := forall ϕ, List.In ϕ Γ -> w ⊩ ϕ.
 
+Lemma sem_expl {M : BM} : forall w ϕ,  w ⊩ ⊥ -> w ⊩ ϕ.
+Proof.
+  intros w ϕ Hbot.
+  apply paste with (C := (fun _ => False)).
+  apply Hbot.
+  intros w' contra. exfalso. exact contra.
+Qed.
 
 Notation "w ⊩' Γ" := (tsat Γ w) (at level 98).
+
+
+Lemma tsat_cons {M : BM} : forall w Γ ϕ, w ⊩' Γ -> w ⊩ ϕ -> w ⊩' ϕ :: Γ.
+  intros w Γ ϕ HΓ Hϕ τ Hτ.
+  destruct Hτ. rewrite <- H. apply Hϕ.
+  apply HΓ. apply H.
+Qed.
+
+
 Theorem soundess Γ ϕ :
   Γ ⊢ ϕ -> forall (M : BM)  w, w ⊩' Γ -> w ⊩ ϕ.
 Proof.
-Admitted.
+  intros Hϕ.
+  induction Hϕ; intros M w Hw.
+  - apply Hw, H.
+  - apply IHHϕ in Hw.
+    apply paste with (C := (fun _ => False)).
+    apply Hw.
+    intros w' contra. exfalso. exact contra.
+  - intros w' Hacc Hw'.
+    apply IHHϕ.
+    apply tsat_cons.
+    intros ι Hι.
+    eapply mono; eauto.
+    apply Hw'.
+  - pose proof Hw as Hw2.
+    apply IHHϕ1 in Hw.
+    apply IHHϕ2 in Hw2.
+    apply Hw.
+    apply acc_refl.
+    apply Hw2.
+  - exists (eq w).
+    split. apply cov_sing.
+    intros w' H. rewrite <- H.
+    left.
+    apply IHHϕ. apply Hw.
+  - exists (eq w).
+    split. apply cov_sing.
+    intros w' H. rewrite <- H.
+    right.
+    apply IHHϕ. apply Hw.
+  - specialize (IHHϕ1 _ _ Hw) as [C [HCw HC]].
+    eapply paste.
+    apply HCw.
+    intros w' H.
+    pose proof H as HCw'.
+    apply HC in H.
+    destruct H as [Hwϕ | Hwψ].
+    + apply IHHϕ2 with (w:=w'); auto.
+      intros ι Hι.
+      eapply mono; eauto.
+      eapply cov_future; eauto.
+      apply acc_refl.
+    + eapply IHHϕ3; auto.
+      intros ι Hι.
+      eapply mono; eauto.
+      eapply cov_future; eauto.
+      apply acc_refl.
+  - split;auto.
+  - apply IHHϕ in Hw; destruct Hw; auto.
+  - apply IHHϕ in Hw; destruct Hw; auto.
+Qed.
+
 
 (* Lemma excl_check1 {M : BM} w A B :
   bsat w (impl A (disj B (excl A B))).
