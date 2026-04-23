@@ -170,6 +170,59 @@ Proof.
   - apply IHHϕ in Hw; destruct Hw; auto.
 Qed.
 
+Section UniversalModel.
+
+(*  Reserved Notation "C ▷ Γ" (at level 98). *)
+(* Inductive cover : Prop := *)
+(* | Ctriv  : list form -> cover *)
+(* | Cbot   : cover *)
+(* | Cunion : cover -> cover -> cover. *)
+
+(* Notation "⟨ Γ ⟩" := (Ctriv Γ). *)
+(* Infix "∪" := Cunion (right associativity, at level 98). *)
+
+(* Inductive covering : cover -> list form -> Prop := *)
+(* | triv  : forall Γ, ⟨Γ⟩  ▷ Γ *)
+(* | empty : forall Γ, Γ ⊢ ⊥ -> Cbot ▷ Γ *)
+(* | union : forall ϕ ψ Γ C D, Γ ⊢ ϕ ∨ ψ -> C ▷ ϕ :: Γ -> D ▷ ψ :: Γ -> Cunion C D ▷ Γ *)
+(* where " C ▷ Γ" := (covering C Γ). *)
+
+(* Reserved Notation "Γ ∈ C" (at level 99). *)
+
+(* Inductive in_cov : list form -> cover -> Prop := *)
+(* | Intriv    : forall Γ, Γ ∈ ⟨Γ⟩ *)
+(* | Inunionr   : forall C D Γ, Γ ∈ C -> Γ ∈ C ∪ D *)
+(* | Inunionl   : forall C D Γ, Γ ∈ D -> Γ ∈ C ∪ D *)
+(* where "Γ ∈ C" := (in_cov Γ C). *)
+
+  Inductive covers : (list form -> Prop) -> list form -> Prop :=
+  | Triv : forall Γ, covers (eq Γ) Γ
+  | Empty : forall Γ, Γ ⊢ ⊥ -> covers (fun _ => False) Γ
+  | Union : forall C D Γ ϕ ψ, Γ ⊢ ϕ ∨ ψ -> covers C (ϕ :: Γ) -> covers D (ψ :: Γ) -> covers (fun Δ => C Δ \/ D Δ) Γ.
+
+Notation "C ▷ Γ" := (covers C Γ)(at level 98).
+Lemma future : forall C Γ Γ', C ▷ Γ -> C Γ' -> forall ϕ, List.In ϕ Γ -> List.In ϕ Γ'.
+Proof.
+  intros C Γ Γ' Hcov H ϕ Hin.
+  destruct Hcov.
+  - rewrite <- H. assumption.
+  - exfalso; assumption.
+  - Admitted.
+
+Section End .
+(* conditions to be a model *)
+(* Lemma future : forall C Γ Γ', C ▷ Γ -> Γ' ∈ C -> forall ϕ, List.In ϕ Γ -> Γ' ⊢ ϕ. *)
+(* Proof. *)
+(*   intros C Γ Γ' Hcov H ϕ Hin. *)
+(*   destruct Hcov. *)
+(*   - remember ⟨Γ⟩ as C eqn: Heq. *)
+(*     inversion H;subst. *)
+(*     injection H1 as H2. *)
+(*     injection H1.  *)
+(*   - admit. *)
+(*   - *)
+
+  
 
 (* Lemma excl_check1 {M : BM} w A B :
   bsat w (impl A (disj B (excl A B))).
