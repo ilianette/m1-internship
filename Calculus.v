@@ -1,14 +1,10 @@
 From Stdlib Require Import Lists.List Sorting.Permutation.
 Require Import Form.
 
-Inductive form : Type :=
-| var : nat -> form
-| bot : form
-| conj : form -> form -> form
-| disj : form -> form -> form
-| impl : form -> form -> form.
 
 
+
+Notation "⊤" := (conj bot bot).
 Notation "⊥" := bot.
 Notation "¬ ϕ" := (impl ϕ ⊥) (at level 94, right associativity).
 Infix "∧" := conj (right associativity, at level 95).
@@ -91,3 +87,10 @@ Proof.
     apply IHproves.
     intros τ H1. inversion H1; [left | right]; auto.
 Qed.
+
+Lemma collapse_context Γ ϕ :
+  Γ ⊢ ϕ -> exists ψ , (ψ :: nil) ⊢ ϕ.
+Proof.
+  intro Hp.
+  exists (List.fold_right disj ⊤ Γ) .
+Admitted.

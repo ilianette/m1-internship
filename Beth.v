@@ -1,5 +1,7 @@
 Require Import Form.
 Require Import Calculus.
+Set Implicit Arguments.
+Unset Strict Implicit.
 
 Class BM : Type :=
 {
@@ -18,9 +20,10 @@ Class BM : Type :=
   (* covers are set*)
   cov_ext : forall C C', (forall w, C w <-> C' w) -> forall w, cov w C -> cov w C';
 
-  res : worlds -> (worlds -> Prop) -> (worlds -> Prop);
-  res_mono : forall C w0 w1, cov w0 C -> acc w0 w1 -> cov w1 (res w1 C);
-  res_ext : forall C w1 w2, res w1 C w2 -> exists w3, C w3 /\ acc w3 w2;
+  res : forall C w w', cov w C -> acc w w' -> exists Cw', cov w' Cw' /\ forall w1, Cw' w1 -> exists w2, C w2 /\ acc w2 w1;
+  (* res : forall w C, cov w C -> (worlds -> Prop); *)
+  (* res_mono : forall C w0 w1, (p : cov w0 C) -> acc w0 w1 -> cov w1 (res w1 C p); *)
+  (* res_ext : forall C w1 w2, (p : cov w0 C)  -> res w1 C w2 p -> exists w3, C w3 /\ acc w3 w2; *)
 
   (* cov_union : forall C w, forall D : worlds -> worlds -> Prop, *)
 
@@ -54,11 +57,16 @@ Lemma mono {M : BM} w w' phi :
   acc w w' -> bsat w phi -> bsat w' phi.
 Proof.
   induction phi in w, w' |-*; cbn.
-   - apply val_mono.
-    - intros H1 H2.  eapply cov_ext; try eapply res_mono; eauto.
-      intuition. apply res_ext in H. firstorder.
+  - apply val_mono.
+  - intros H1 H2.
+    destruct (res H2 H1) as [Cw' [Hcov Habs]]. eapply cov_ext.
+    + intuition.
+        specialize (Habs w0 H) as [_ [abs _]]. apply abs.
+    + apply Hcov.
   - intuition eauto.
-  - intros H (C & H1 & H2). exists (res w' C). split.
+  - intros H (C & H1 & H2).
+    destruct (res H1 H) as [Cw' [res_mono res_ext]].
+    exists Cw'. split.
     + eapply res_mono; eauto.
     + intros w1 (w2 & H3 & H4) % res_ext. apply H2 in H3. intuition eauto.
   - clear IHphi1 IHphi2. intros. apply H0; try eapply acc_tran; eauto.
@@ -86,7 +94,10 @@ Proof.
     intros w' Cw'.
     specialize (H2 w' Cw') as [Dw' [H3 H4]].
     eauto.
-  - intros. eapply IHphi2.  apply res_mono with (w0 := w). apply H. apply H1.
+  - intros.
+    destruct (res H H1) as [Cw' [res_mono res_ext]].
+    eapply IHphi2.
+    apply res_mono.
     intros v' Hv'.
     pose proof Hv' as Hv'2.
     apply res_ext in Hv' as (v & Hv &  Hvv').
@@ -194,21 +205,92 @@ Section UniversalModel.
 (* | Inunionr   : forall C D Γ, Γ ∈ C -> Γ ∈ C ∪ D *)
 (* | Inunionl   : forall C D Γ, Γ ∈ D -> Γ ∈ C ∪ D *)
 (* where "Γ ∈ C" := (in_cov Γ C). *)
+  (* Inductive cover : (list form -> Prop) -> Type := *)
+  (* | CovTriv  : forall Γ, cover (eq Γ) *)
+  (* | CovEmpty : forall Γ, Γ ⊢ ⊥ -> cover (fun _ => False). *)
 
+  (* Inductive covers2 : (list form -> Prop) -> cover -> Prop := *)
+  (* | Triv : forall Γ, covers2 (CovTriv Γ). *)
   Inductive covers : (list form -> Prop) -> list form -> Prop :=
-  | Triv : forall Γ, covers (eq Γ) Γ
-  | Empty : forall Γ, Γ ⊢ ⊥ -> covers (fun _ => False) Γ
-  | Union : forall C D Γ ϕ ψ, Γ ⊢ ϕ ∨ ψ -> covers C (ϕ :: Γ) -> covers D (ψ :: Γ) -> covers (fun Δ => C Δ \/ D Δ) Γ.
+  | Triv : forall Γ C, (forall Γ', C Γ' <-> Γ' = Γ) -> covers C Γ
+  (* |  Triv2 : forall Γ, covers (eq Γ) Γ  *)
+  | Empty : forall Γ C, Γ ⊢ ⊥ -> (forall Γ', C Γ' <-> False) -> covers C Γ
+  (* | Empty : forall Γ, Γ ⊢ ⊥ -> covers (fun _ => False) Γ *)
+  | Union : forall C D E Γ ϕ ψ, Γ ⊢ ϕ ∨ ψ -> covers C (ϕ :: Γ) -> covers D (ψ :: Γ) -> (forall Δ, E Δ <-> C Δ \/ D Δ) -> covers E Γ.
+
 
 Notation "C ▷ Γ" := (covers C Γ)(at level 98).
-Lemma future : forall C Γ Γ', C ▷ Γ -> C Γ' -> forall ϕ, List.In ϕ Γ -> List.In ϕ Γ'.
-Proof.
-  intros C Γ Γ' Hcov H ϕ Hin.
-  destruct Hcov.
-  - rewrite <- H. assumption.
-  - exfalso; assumption.
-  - Admitted.
 
+From Stdlib Require Import Program.Basics.
+
+Program Instance universalModel : BM :=
+  {
+    worlds := list form;
+    acc    := @List.incl form;
+    val    := fun n => List.In (var n);
+    cov    := flip covers;
+  }.
+
+Next Obligation.
+Proof. apply List.incl_refl. Qed.
+
+ Next Obligation.
+Proof. eapply List.incl_tran. apply H. apply H0. Qed.
+
+(*cov_future*)
+Next Obligation.
+Proof.
+  rename w into Γ, w' into Γ', H into Hcov, H0 into H.
+  induction Hcov.
+  - rewrite (proj1 (H0 Γ') H). apply List.incl_refl.
+  - specialize (H1 Γ'). exfalso. intuition.
+  - apply (H1 Γ') in H.
+    destruct H;
+    [ specialize (IHHcov1 H) as H2 | specialize (IHHcov2 H) as H2];
+      destruct (List.incl_cons_inv H2) as [_ goal]; assumption.
+Qed.
+
+Next Obligation.
+Proof. constructor. intuition. Qed.
+
+Next Obligation.
+  cbv. cbv in H0.
+  destruct H0.
+  - apply Triv.
+    intro Γ'.
+    eapply iff_trans.
+    apply iff_sym, (H Γ').
+    apply H0.
+  -
+    apply Empty.
+    apply H0.
+    intro Γ'.
+    eapply iff_trans.
+    apply iff_sym, (H Γ').
+    apply H1.
+  - apply Union with (ϕ:=ϕ) (ψ:=ψ) (C := C) (D := D) .
+    apply H0.
+    apply H0_.
+    apply H0_0.
+    intro  Δ.
+    eapply iff_trans.
+    apply iff_sym, (H Δ).
+    apply H1.
+Qed.
+Next Obligation.
+Proof.
+  rename w into Γ, w' into Γ', H into Hcov, H0 into H.
+ destruct Hcov.
+  - exists (eq Γ').
+    split.
+    + apply Triv. intuition.
+    + intros; subst w1.
+      exists Γ. split. specialize (H0 Γ). intuition. assumption.
+  - exists (fun _ => False).
+    split.
+    + apply Empty. eapply weak. apply H0. apply H. intuition.
+    + intros w1 abs. exfalso. apply abs.
+  - (* prob. need induction *)
 Section End .
 (* conditions to be a model *)
 (* Lemma future : forall C Γ Γ', C ▷ Γ -> Γ' ∈ C -> forall ϕ, List.In ϕ Γ -> Γ' ⊢ ϕ. *)
