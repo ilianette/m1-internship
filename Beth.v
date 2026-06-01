@@ -182,43 +182,10 @@ Proof.
 Qed.
 
 Section UniversalModel.
-
-(*  Reserved Notation "C ▷ Γ" (at level 98). *)
-(* Inductive cover : Prop := *)
-(* | Ctriv  : list form -> cover *)
-(* | Cbot   : cover *)
-(* | Cunion : cover -> cover -> cover. *)
-
-(* Notation "⟨ Γ ⟩" := (Ctriv Γ). *)
-(* Infix "∪" := Cunion (right associativity, at level 98). *)
-
-(* Inductive covering : cover -> list form -> Prop := *)
-(* | triv  : forall Γ, ⟨Γ⟩  ▷ Γ *)
-(* | empty : forall Γ, Γ ⊢ ⊥ -> Cbot ▷ Γ *)
-(* | union : forall ϕ ψ Γ C D, Γ ⊢ ϕ ∨ ψ -> C ▷ ϕ :: Γ -> D ▷ ψ :: Γ -> Cunion C D ▷ Γ *)
-(* where " C ▷ Γ" := (covering C Γ). *)
-
-(* Reserved Notation "Γ ∈ C" (at level 99). *)
-
-(* Inductive in_cov : list form -> cover -> Prop := *)
-(* | Intriv    : forall Γ, Γ ∈ ⟨Γ⟩ *)
-(* | Inunionr   : forall C D Γ, Γ ∈ C -> Γ ∈ C ∪ D *)
-(* | Inunionl   : forall C D Γ, Γ ∈ D -> Γ ∈ C ∪ D *)
-(* where "Γ ∈ C" := (in_cov Γ C). *)
-  (* Inductive cover : (list form -> Prop) -> Type := *)
-  (* | CovTriv  : forall Γ, cover (eq Γ) *)
-  (* | CovEmpty : forall Γ, Γ ⊢ ⊥ -> cover (fun _ => False). *)
-
-  (* Inductive covers2 : (list form -> Prop) -> cover -> Prop := *)
-  (* | Triv : forall Γ, covers2 (CovTriv Γ). *)
   Inductive covers : (list form -> Prop) -> list form -> Prop :=
   | Triv : forall Γ C, (forall Γ', C Γ' <-> Γ' = Γ) -> covers C Γ
-  (* |  Triv2 : forall Γ, covers (eq Γ) Γ  *)
   | Empty : forall Γ C, Γ ⊢ ⊥ -> (forall Γ', C Γ' <-> False) -> covers C Γ
-  (* | Empty : forall Γ, Γ ⊢ ⊥ -> covers (fun _ => False) Γ *)
   | Union : forall C D E Γ ϕ ψ, Γ ⊢ ϕ ∨ ψ -> covers C (ϕ :: Γ) -> covers D (ψ :: Γ) -> (forall Δ, E Δ <-> C Δ \/ D Δ) -> covers E Γ.
-
-
 Notation "C ▷ Γ" := (covers C Γ)(at level 98).
 
 From Stdlib Require Import Program.Basics.
@@ -290,21 +257,10 @@ Proof.
     split.
     + apply Empty. eapply weak. apply H0. apply H. intuition.
     + intros w1 abs. exfalso. apply abs.
-  - (* prob. need induction *)
-Section End .
-(* conditions to be a model *)
-(* Lemma future : forall C Γ Γ', C ▷ Γ -> Γ' ∈ C -> forall ϕ, List.In ϕ Γ -> Γ' ⊢ ϕ. *)
-(* Proof. *)
-(*   intros C Γ Γ' Hcov H ϕ Hin. *)
-(*   destruct Hcov. *)
-(*   - remember ⟨Γ⟩ as C eqn: Heq. *)
-(*     inversion H;subst. *)
-(*     injection H1 as H2. *)
-(*     injection H1.  *)
-(*   - admit. *)
-(*   - *)
+  - (* prob. need induction,
+     not sure about how to do it, wrong formulation?*)
+Section End.
 
-  
 
 (* Lemma excl_check1 {M : BM} w A B :
   bsat w (impl A (disj B (excl A B))).
