@@ -285,6 +285,28 @@ Proof.
          exists w2.
          split. apply H0. right. apply Hw2. apply Hw2.
 Qed.
+
+From Stdlib Require Import Program.Equality.
+
+Next Obligation.
+Proof.
+  induction H.
+  - destruct (H0 Γ) as [DΓ HDΓ].
+    { apply H. reflexivity. }
+    exists DΓ. apply HDΓ.
+  - exists (fun _ => False).
+    split.
+    + apply Empty. apply H. intuition.
+    + intuition.
+  - edestruct (IHcovers1) as [F HF].
+    { intros Δ HΔ. apply H0. apply H3. left. apply HΔ. }
+    edestruct (IHcovers2) as [G HG].
+    { intros Δ HΔ. apply H0. apply H3. right. apply HΔ. }
+    exists (fun Δ => F Δ \/ G Δ).
+    split.
+    + eapply Union.
+      apply H. apply H1. apply H2. 
+    + intros. destruct H4. apply HF. apply H4. apply HG. apply H4.
 Section End.
 
 
