@@ -244,21 +244,47 @@ Next Obligation.
     apply iff_sym, (H Δ).
     apply H1.
 Qed.
+
+Lemma incl_cons_cons : forall A l l' (x : A), List.incl l l' -> List.incl (x :: l) (x :: l').
+Proof.
+  intros.
+  apply List.incl_cons. apply List.in_eq.
+  apply List.incl_tl.
+  apply H.
+Qed.
 Next Obligation.
 Proof.
-  rename w into Γ, w' into Γ', H into Hcov, H0 into H.
- destruct Hcov.
+  rename w into Γ, w' into Γ', H into Hcov, H0 into Hincl.
+  revert Γ' Hincl.
+  induction Hcov; intros Γ' Hincl.
   - exists (eq Γ').
     split.
     + apply Triv. intuition.
     + intros; subst w1.
-      exists Γ. split. specialize (H0 Γ). intuition. assumption.
+      exists Γ. split. specialize (H Γ). intuition. assumption.
   - exists (fun _ => False).
     split.
-    + apply Empty. eapply weak. apply H0. apply H. intuition.
+    + apply Empty. eapply weak. apply H. apply Hincl. intuition.
     + intros w1 abs. exfalso. apply abs.
-  - (* prob. need induction,
-     not sure about how to do it, wrong formulation?*)
+  -  destruct (IHHcov1 (cons ϕ Γ') (incl_cons_cons Hincl)) as [G HG].
+     destruct (IHHcov2 (cons ψ Γ') (incl_cons_cons Hincl)) as [F HF].
+     exists (fun Δ => G Δ \/ F Δ).
+     split.
+     + apply Union with (C := G) (D := F) (ϕ:=ϕ) (ψ:=ψ).
+       * eapply weak. apply H. apply Hincl.
+       * apply HG.
+       * apply HF.
+       * intuition.
+     + intros Δ HΔ.
+       destruct HG as [_ HG], HF as [_ HF].
+       destruct HΔ.
+       * destruct (HG Δ H1) as [w2 Hw2].
+          exists w2.
+         split. apply H0. left. apply Hw2. apply Hw2.
+       * destruct (HF Δ H1) as [w2 Hw2].
+         exists w2.
+         split. apply H0. right. apply Hw2. apply Hw2.
+Qed.
 Section End.
 
 
