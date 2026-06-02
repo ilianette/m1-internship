@@ -195,34 +195,48 @@ Program Instance universalModel : BM :=
   {
     worlds := list form;
     acc    := @List.incl form;
-    val    := fun n => List.In (var n);
+    val    := fun n Γ => Γ ⊢ var n;
     cov    := flip covers;
   }.
 
+(* note : the truth lemma should ease the proofs, probably worth a try *)
 Next Obligation.
 Proof. apply List.incl_refl. Qed.
 
  Next Obligation.
 Proof. eapply List.incl_tran. apply H. apply H0. Qed.
 
-(*cov_future*)
+
 Next Obligation.
 Proof.
   rename w into Γ, w' into Γ', H into Hcov, H0 into H.
-  induction Hcov.
-  - rewrite (proj1 (H0 Γ') H). apply List.incl_refl.
-  - specialize (H1 Γ'). exfalso. intuition.
-  - apply (H1 Γ') in H.
-    destruct H;
-    [ specialize (IHHcov1 H) as H2 | specialize (IHHcov2 H) as H2];
-      destruct (List.incl_cons_inv H2) as [_ goal]; assumption.
+  eapply weakening.
+  apply H. apply Hcov.
 Qed.
 
 Next Obligation.
-Proof. constructor. intuition. Qed.
+Proof.
+  induction H.
+  - specialize (H w' ).
+    apply H in H0. subst.
+    apply List.incl_refl.
+  -  specialize (H1 w').
+     apply H1 in H0.
+     exfalso; assumption.
+  - specialize (H3 w').
+    apply H3 in H0.
+    unfold List.incl in *.
+    destruct H0 as [H0 | H0];
+      intros a Ha; [apply IHcovers1 | apply IHcovers2];
+      try apply H0; apply List.in_cons; apply Ha.
+Qed.
+Next Obligation.
+  cbv.
+  apply Triv. intuition.
+Qed.
 
 Next Obligation.
-  cbv. cbv in H0.
+  cbv in H0.
   destruct H0.
   - apply Triv.
     intro Γ'.
@@ -314,9 +328,8 @@ Next Obligation.
 Proof.
   induction H.
   - specialize (H Γ). apply H0. apply H. trivial.
-  - assert ( Γ ⊢ var x ).
-    { apply expl. apply H. }
-    Admitted.
+  - apply expl. apply H.
+  - (* WIP *)
 Section End.
 
 
