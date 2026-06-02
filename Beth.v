@@ -36,6 +36,7 @@ Class BM : Type :=
     cov w C ->
     (forall w' : worlds, C w' -> exists Dw', cov w' Dw' /\ forall wi, Dw' wi -> P wi) ->
     exists U, cov w U /\ (forall w', U w' -> P w');
+  cov_past2 : forall w x, (exists C, cov w C /\ forall w', C w' -> val x w') -> val x w;
   cov_paste : forall C w x, cov w C -> (forall w', C w' -> val x w') -> val x w;
 }.
 
@@ -304,9 +305,18 @@ Proof.
     { intros Δ HΔ. apply H0. apply H3. right. apply HΔ. }
     exists (fun Δ => F Δ \/ G Δ).
     split.
-    + eapply Union.
-      apply H. apply H1. apply H2. 
+    + eapply Union with (C:=F) (D:=G).
+      apply H. apply HF. apply HG. intros; apply iff_refl.
     + intros. destruct H4. apply HF. apply H4. apply HG. apply H4.
+Qed.
+
+Next Obligation.
+Proof.
+  induction H.
+  - specialize (H Γ). apply H0. apply H. trivial.
+  - assert ( Γ ⊢ var x ).
+    { apply expl. apply H. }
+    Admitted.
 Section End.
 
 
