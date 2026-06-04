@@ -36,7 +36,6 @@ Class BM : Type :=
     cov w C ->
     (forall w' : worlds, C w' -> exists Dw', cov w' Dw' /\ forall wi, Dw' wi -> P wi) ->
     exists U, cov w U /\ (forall w', U w' -> P w');
-  cov_past2 : forall w x, (exists C, cov w C /\ forall w', C w' -> val x w') -> val x w;
   cov_paste : forall C w x, cov w C -> (forall w', C w' -> val x w') -> val x w;
 }.
 
@@ -326,13 +325,77 @@ Qed.
 
 Next Obligation.
 Proof.
+  rename w into Γ.  (* x into n, H into C, H0 into H, 1 into H0. *)
   induction H.
   - specialize (H Γ). apply H0. apply H. trivial.
   - apply expl. apply H.
-  - (* WIP *)
+  - eapply disjE.
+    + apply H.
+    + eapply impI. apply IHcovers1.
+      intros Δ HΔ. apply H0. apply H3. left. apply HΔ.
+    + eapply impI. apply IHcovers2.
+      intros Δ HΔ. apply H0. apply H3. right. apply HΔ.
+Qed.
+
+Lemma truth_lemma : forall Γ ϕ, (Γ ⊢ ϕ) <-> (Γ ⊩ ϕ).
+  Proof.
+  intros. revert Γ.
+  induction ϕ; split.
+  - intro H.
+    apply H.
+  - intro H. apply H.
+  - intro H.  apply Empty. apply H. intuition.
+  - intro H. unfold bsat in H.
+    inversion H.
+    + subst. exfalso. apply (H0 Γ). reflexivity.
+    + subst; intuition.
+    + subst.  inversion H1.
+      * subst. exfalso. apply (H3 (cons ϕ Γ)). left. apply H4. reflexivity.
+      * subst. inversion H2.
+        ** subst. exfalso. apply (H3 (cons ψ Γ)). right. apply H6. reflexivity.
+        ** eapply disjE. apply H0. apply impI. assumption. apply impI. assumption.
+       ** subst. (*induction ??*)
+
 Section End.
 
 
+Lemma truth_lemma2 : forall Γ ϕ, (Γ ⊢ ϕ) <-> ((Γ ⊩ ϕ) /\ exists C, C ▷ Γ).
+Proof.
+  intros. revert Γ.
+  induction ϕ; split.
+  (* - intro H. *)
+  (*   split. *)
+  (*   + apply H. *)
+  (*   + exists (eq Γ). apply Triv. intuition. *)
+  (* - intro H. apply H. *)
+  (* - intro H. split. apply Empty. apply H. intuition. *)
+  (*   exists (fun _ => False). apply Empty. apply H. intuition.
+   *)
+  - admit. - admit. -admit.
+  - intro H. unfold bsat in H. destruct H as [Hcov H].
+    inversion Hcov.
+    + subst. exfalso. apply (H0 Γ). reflexivity.
+    + subst; intuition.
+    + subst.  inversion H1.
+      * subst. exfalso. apply (H3 (cons ϕ Γ)). left. apply H4. reflexivity.
+      * subst. 
+      * subst.
+
+  (*   + subst. exfalso. apply (H3 Γ). destruct H as [F HF]. *)
+  (*     destruct HF. *)
+  (*     * *)
+  (*     cadmit. *)
+  (* - intros. *)
+  (*   split; [eapply IHϕ1, conjE1 | eapply IHϕ2, conjE2]; apply H. *)
+  (* - intros. *)
+  (*   apply conjI; [apply IHϕ1 | apply IHϕ2]; apply H. *)
+    + admit. - admit. - admit.
+  - intros. split.
+    eexists.
+    split.
+    + eapply Union. apply H.
+      specialize (IHϕ1 (cons ϕ1 Γ)). destruct IHϕ1 as [Hbla Hoo].
+                       
 (* Lemma excl_check1 {M : BM} w A B :
   bsat w (impl A (disj B (excl A B))).
 Proof.
