@@ -183,7 +183,7 @@ Qed.
 
 Section UniversalModel.
   Inductive covers : (list form -> Prop) -> list form -> Prop :=
-  | Triv : forall Γ C, (forall Γ', C Γ' <-> Γ' = Γ) -> covers C Γ
+  | Triv : forall Γ C, (forall Γ', C Γ' <-> Γ' = Γ) -> covers C  Γ
   | Empty : forall Γ C, Γ ⊢ ⊥ -> (forall Γ', C Γ' <-> False) -> covers C Γ
   | Union : forall C D E Γ ϕ ψ, Γ ⊢ ϕ ∨ ψ -> covers C (ϕ :: Γ) -> covers D (ψ :: Γ) -> (forall Δ, E Δ <-> C Δ \/ D Δ) -> covers E Γ.
 Notation "C ▷ Γ" := (covers C Γ)(at level 98).
@@ -337,65 +337,71 @@ Proof.
       intros Δ HΔ. apply H0. apply H3. right. apply HΔ.
 Qed.
 
+Lemma syntactic_paste : forall Γ C ϕ, C ▷ Γ -> (forall Δ, C Δ -> Δ ⊢ ϕ) -> Γ ⊢ ϕ.
+  intros Γ C ϕ Hcov. revert ϕ.
+  induction Hcov; intros ι Hall.
+  - apply Hall. apply H. reflexivity.
+  - apply expl. apply H.
+  - eapply disjE. apply H.
+    + apply impI. apply IHHcov1. intros Δ HC. apply Hall. apply H0. left. apply HC.
+    + apply impI. apply IHHcov2. intros Δ HD. apply Hall. apply H0. right. apply HD.
+Qed.
+
 Lemma truth_lemma : forall Γ ϕ, (Γ ⊢ ϕ) <-> (Γ ⊩ ϕ).
   Proof.
   intros. revert Γ.
-  induction ϕ; split.
-  - intro H.
+  induction ϕ;  split; intro H.
+  - apply H.
+  - apply H.
+  - apply Empty. apply H. intuition.
+  - unfold bsat in H. eapply syntactic_paste. apply H. intuition.
+  - split; [eapply IHϕ1, conjE1 | eapply IHϕ2, conjE2]; apply H.
+  - apply conjI; [eapply IHϕ1 | eapply IHϕ2]; apply H.
+  - exists (fun Δ => Δ = (cons ϕ1 Γ) \/ Δ = (cons ϕ2 Γ)).
+    split.
+    + eapply Union with (C := eq (cons ϕ1 Γ)) (D := eq (cons ϕ2 Γ)).
+      * apply H.
+      * apply Triv; intuition.
+      * apply Triv; intuition.
+      * intros; intuition.
+    + intros Δ HΔ.
+      destruct HΔ; [left | right]; [apply IHϕ1 | apply IHϕ2]; apply axiom; rewrite H0; apply List.in_eq.
+  - destruct H as [C [Hcov H]].
+    eapply syntactic_paste. apply Hcov.
+    intros Δ HΔ. specialize (H Δ HΔ).
+    destruct H; [apply disjI1, IHϕ1 | apply disjI2, IHϕ2]; apply H.
+  - intros Δ Hacc Hsat.
+    apply IHϕ2.
+    assert (Δ ⊢ ϕ1 ⊃ ϕ2) as Himp.
+    {
+      eapply impI.  apply IHϕ2. apply mono with (w:= cons ϕ1 Γ).
+      - apply incl_cons_cons. apply Hacc.
+      - apply IHϕ2. eapply impE. eapply weak. apply H. intros. apply List.in_cons. apply H0. apply axiom. apply List.in_eq.
+    }
+    eapply impE. apply Himp.
+    apply IHϕ1.
+    apply Hsat.
+  - apply impI.
+    apply IHϕ2.
     apply H.
-  - intro H. apply H.
-  - intro H.  apply Empty. apply H. intuition.
-  - intro H. unfold bsat in H.
-    inversion H.
-    + subst. exfalso. apply (H0 Γ). reflexivity.
-    + subst; intuition.
-    + subst.  inversion H1.
-      * subst. exfalso. apply (H3 (cons ϕ Γ)). left. apply H4. reflexivity.
-      * subst. inversion H2.
-        ** subst. exfalso. apply (H3 (cons ψ Γ)). right. apply H6. reflexivity.
-        ** eapply disjE. apply H0. apply impI. assumption. apply impI. assumption.
-       ** subst. (*induction ??*)
-
+    + apply List.incl_tl. apply List.incl_refl.
+    + apply IHϕ1. apply axiom. apply List.in_eq.
+  Qed.
 Section End.
 
 
-Lemma truth_lemma2 : forall Γ ϕ, (Γ ⊢ ϕ) <-> ((Γ ⊩ ϕ) /\ exists C, C ▷ Γ).
-Proof.
-  intros. revert Γ.
-  induction ϕ; split.
-  (* - intro H. *)
-  (*   split. *)
-  (*   + apply H. *)
-  (*   + exists (eq Γ). apply Triv. intuition. *)
-  (* - intro H. apply H. *)
-  (* - intro H. split. apply Empty. apply H. intuition. *)
-  (*   exists (fun _ => False). apply Empty. apply H. intuition.
-   *)
-  - admit. - admit. -admit.
-  - intro H. unfold bsat in H. destruct H as [Hcov H].
-    inversion Hcov.
-    + subst. exfalso. apply (H0 Γ). reflexivity.
-    + subst; intuition.
-    + subst.  inversion H1.
-      * subst. exfalso. apply (H3 (cons ϕ Γ)). left. apply H4. reflexivity.
-      * subst. 
-      * subst.
 
-  (*   + subst. exfalso. apply (H3 Γ). destruct H as [F HF]. *)
-  (*     destruct HF. *)
-  (*     * *)
-  (*     cadmit. *)
-  (* - intros. *)
-  (*   split; [eapply IHϕ1, conjE1 | eapply IHϕ2, conjE2]; apply H. *)
-  (* - intros. *)
-  (*   apply conjI; [apply IHϕ1 | apply IHϕ2]; apply H. *)
-    + admit. - admit. - admit.
-  - intros. split.
-    eexists.
-    split.
-    + eapply Union. apply H.
-      specialize (IHϕ1 (cons ϕ1 Γ)). destruct IHϕ1 as [Hbla Hoo].
-                       
+Theorem completness : forall Γ ϕ, (forall {M: BM} w, w ⊩' Γ -> w ⊩ ϕ) -> Γ ⊢ ϕ.
+Proof.
+  intros.
+  apply truth_lemma.
+  apply H.
+  intros ψ Hin.
+  apply truth_lemma.
+  apply axiom.
+  apply Hin.
+Qed.
+
 (* Lemma excl_check1 {M : BM} w A B :
   bsat w (impl A (disj B (excl A B))).
 Proof.
